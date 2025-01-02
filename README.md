@@ -34,6 +34,33 @@ nba-dashboard-analytics/
 └── README.md
 ```
 
+## Architecture
+
+The following diagram illustrates the high-level architecture and data flow of the NBA Dashboard Analytics demo:
+
+```mermaid
+graph TD
+    A[SportsData.io API] -->|Fetch Data| B[Data Processor Container]
+    B -->|Store Processed Data| C[Amazon S3]
+    C -->|Retrieve Data| D[Analytics Container]
+    D -->|Store Analysis Results| C
+    C -->|Fetch Visualizations| E[Visualizer Container]
+    E -->|Serve Dashboard| F[User's Web Browser]
+    
+    subgraph AWS ECS Cluster
+    B
+    D
+    E
+    end
+    
+    G[AWS CloudFormation] -->|Deploy| B
+    G -->|Deploy| D
+    G -->|Deploy| E
+    
+    H[Setup Script] -->|Create/Update| G
+    I[Cleanup Script] -->|Delete Resources| G
+```
+
 ## Setup Instructions
 
 1. Clone this repository:

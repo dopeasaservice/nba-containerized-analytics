@@ -1,0 +1,110 @@
+{
+    "family": "nba-analytics-task",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "1024",
+    "memory": "2048",
+    "executionRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskRole",
+    "containerDefinitions": [
+        {
+            "name": "data-processor",
+            "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nba-analytics-data-processor:latest",
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_DEFAULT_REGION",
+                    "value": "${AWS_REGION}"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "NBA_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:NBA_API_KEY"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/nba-analytics",
+                    "awslogs-region": "${AWS_REGION}",
+                    "awslogs-stream-prefix": "data-processor"
+                }
+            },
+            "mountPoints": [
+                {
+                    "sourceVolume": "shared-data",
+                    "containerPath": "/data",
+                    "readOnly": false
+                }
+            ]
+        },
+        {
+            "name": "analytics",
+            "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nba-analytics-analytics:latest",
+            "essential": true,
+            "dependsOn": [
+                {
+                    "containerName": "data-processor",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/nba-analytics",
+                    "awslogs-region": "${AWS_REGION}",
+                    "awslogs-stream-prefix": "analytics"
+                }
+            },
+            "mountPoints": [
+                {
+                    "sourceVolume": "shared-data",
+                    "containerPath": "/data",
+                    "readOnly": false
+                }
+            ]
+        },
+        {
+            "name": "visualizer",
+            "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nba-analytics-visualizer:latest",
+            "essential": true,
+            "dependsOn": [
+                {
+                    "containerName": "analytics",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "portMappings": [
+                {
+                    "containerPort": 5000,
+                    "protocol": "tcp"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/nba-analytics",
+                    "awslogs-region": "${AWS_REGION}",
+                    "awslogs-stream-prefix": "visualizer"
+                }
+            },
+            "mountPoints": [
+                {
+                    "sourceVolume": "shared-data",
+                    "containerPath": "/data",
+                    "readOnly": true
+                }
+            ]
+        }
+    ],
+    "volumes": [
+        {
+            "name": "shared-data",
+            "efsVolumeConfiguration": {
+                "fileSystemId": "${EFS_FILESYSTEM_ID}",
+                "rootDirectory": "/"
+            }
+        }
+    ]
+}

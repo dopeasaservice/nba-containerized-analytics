@@ -1,0 +1,10 @@
+# Use slim Python image for smaller size
+# Set working directory
+# Install system dependencies
+# Copy requirements first to leverage Docker cache
+# Copy source code and templates
+# Create data directory
+# Set environment variables
+# Run as non-root user for security
+# Expose port
+# Command to run the Flask app with gunicorn
